@@ -2,6 +2,7 @@
 
 Message Archive is a Windows desktop application for viewing and exploring iMessage conversations from local iPhone backups. It allows you to read iMessage message history on a PC, search conversations, and export message data without uploading anything to the cloud.
 
+![Message Archive App Screenshot](src/MessageArchive/Assets/screenshot.png)
 ## Download
 
 **[Download the latest Windows installer](../../releases/latest/download/MessageArchive-Setup.exe)**
