@@ -1,0 +1,10 @@
+<Application x:Class="MessageArchive.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:MessageArchive"
+             xmlns:conv="clr-namespace:MessageArchive.Converters"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <conv:CountToVisibilityConverter x:Key="CountToVis"/>
+    </Application.Resources>
+</Application>

@@ -1,0 +1,728 @@
+<Window x:Class="MessageArchive.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:MessageArchive.ViewModels"
+        xmlns:conv="clr-namespace:MessageArchive.Converters"
+        Title="Message Archive"
+        Height="720" Width="1000"
+        FontFamily="Segoe UI Variable Text, Segoe UI, Arial"
+        Background="#F9F9F9"
+        WindowStartupLocation="CenterScreen">
+    
+    <Window.DataContext>
+        <vm:MainViewModel />
+    </Window.DataContext>
+    
+    <Window.Resources>
+        <!-- Modern Minimalist Theme -->
+        <SolidColorBrush x:Key="AccentBrush" Color="#0078D4"/>
+        <SolidColorBrush x:Key="SidebarBackground" Color="#F3F3F3"/>
+        <SolidColorBrush x:Key="SecondaryText" Color="#666666"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#E5E5E5"/>
+        
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <conv:ColumnConverter x:Key="ColumnConverter"/>
+        <conv:AlignConverter x:Key="AlignConverter"/>
+        <conv:EqualsConverter x:Key="EqualsConverter"/>
+        <conv:StringToVisConverter x:Key="StringToVis"/>
+        
+        <Style x:Key="TextButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <TextBlock Text="{TemplateBinding Content}" TextDecorations="Underline"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Selectable iMessage-style Bubble Template -->
+        <DataTemplate x:Key="MessageTemplate">
+            <Grid Margin="12,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto" MinWidth="100"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="{Binding IsFromMe, ConverterParameter=2, Converter={StaticResource ColumnConverter}}" 
+                            HorizontalAlignment="{Binding IsFromMe, Converter={StaticResource AlignConverter}}">
+                    
+                    <Border CornerRadius="18" Padding="14,10" MaxWidth="500">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="#E9E9EB"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsFromMe}" Value="True">
+                                        <Setter Property="Background" Value="#007AFF"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+
+                        <StackPanel>
+                            <!-- Selectable Text Box to allow highlight/copy -->
+                            <TextBox Text="{Binding Text}" 
+                                     IsReadOnly="True" 
+                                     BorderThickness="0" 
+                                     Background="Transparent" 
+                                     TextWrapping="Wrap"
+                                     FontSize="14"
+                                     FontFamily="Segoe UI Emoji, Segoe UI"
+                                     RenderOptions.BitmapScalingMode="HighQuality"
+                                     TextOptions.TextFormattingMode="Ideal">
+                                <TextBox.Style>
+                                    <Style TargetType="TextBox">
+                                        <Setter Property="Foreground" Value="Black"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsFromMe}" Value="True">
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBox.Style>
+                                <TextBox.Template>
+                                    <ControlTemplate TargetType="TextBox">
+                                        <ScrollViewer x:Name="PART_ContentHost" Focusable="false" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                                    </ControlTemplate>
+                                </TextBox.Template>
+                            </TextBox>
+                            
+                            <TextBlock Text="{Binding DisplayTime}" 
+                                       FontSize="10" 
+                                       Margin="0,4,0,0"
+                                       HorizontalAlignment="Right">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#8E8E93"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsFromMe}" Value="True">
+                                                <Setter Property="Foreground" Value="#C2E0FF"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                    
+                    <TextBlock Text="{Binding Service}" 
+                               FontSize="9" 
+                               Foreground="#C7C7CC" 
+                               Margin="8,2" 
+                               HorizontalAlignment="{Binding IsFromMe, Converter={StaticResource AlignConverter}}"/>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Modern Contact Item Template -->
+        <DataTemplate x:Key="ContactTemplate">
+            <Border x:Name="ItemContainer" Padding="16,12" Background="Transparent" CornerRadius="8" Margin="4,2">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="{Binding DisplayWithCount}" FontWeight="SemiBold" FontSize="14" Foreground="#1A1A1A"/>
+                        <TextBlock Text="{Binding Handle}" FontSize="12" Foreground="{StaticResource SecondaryText}"/>
+                    </StackPanel>
+                    
+                    <Border Grid.Column="1" VerticalAlignment="Center" Background="#EEEEF0" CornerRadius="10" Padding="8,2">
+                        <TextBlock Text="{Binding ItemCount}" FontSize="10" FontWeight="Bold" Foreground="#333333"/>
+                    </Border>
+                </Grid>
+            </Border>
+            <DataTemplate.Triggers>
+                <Trigger Property="ListBoxItem.IsMouseOver" Value="True">
+                    <Setter TargetName="ItemContainer" Property="Background" Value="#EBEBEB"/>
+                </Trigger>
+                <Trigger Property="ListBoxItem.IsSelected" Value="True">
+                    <Setter TargetName="ItemContainer" Property="Background" Value="#E1EEF9"/>
+                    <Setter TargetName="ItemContainer" Property="BorderBrush" Value="#0078D4"/>
+                </Trigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+        
+        <!-- Minimal ListBox Style -->
+        <Style x:Key="MinimalListBoxStyle" TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <ContentPresenter />
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Classic Windows Menu -->
+        <Menu Grid.Row="0" Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+            <MenuItem Header="_File">
+                <MenuItem Header="_Open New Backup..." Command="{Binding SelectBackupFolderCommand}"/>
+                <Separator />
+                <MenuItem Header="E_xit" Click="ExitMenuItem_Click"/>
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="_Messages" Command="{Binding ShowChatCommand}"/>
+                <MenuItem Header="_Analytics" Command="{Binding ShowAnalyticsCommand}"/>
+                <MenuItem Header="_Links &amp; Extras" Command="{Binding ShowLinksCommand}"/>
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="About Message Archive" Click="AboutMenuItem_Click"/>
+                <Separator />
+                <MenuItem Header="Star on GitHub" Click="StarOnGitHub_Click"/>
+                <MenuItem Header="Report a Problem" Click="ReportProblem_Click"/>
+            </MenuItem>
+        </Menu>
+
+        <Grid Grid.Row="1">
+            <!-- Welcome Layer -->
+            <Grid Visibility="{Binding IsWelcomeVisible, Converter={StaticResource BoolToVis}}" Background="White">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="600" Margin="40">
+                        <TextBlock Text="Message Archive" FontSize="52" FontWeight="Bold" HorizontalAlignment="Center" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,10"/>
+                        <TextBlock Text="View and explore iMessage conversations from iPhone backups" 
+                                   TextAlignment="Center" FontSize="16" Foreground="{StaticResource SecondaryText}" Margin="0,0,0,40"/>
+                        
+                        <Border Background="#F9F9F9" CornerRadius="12" Padding="30" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="Preparing an iPhone backup (Windows):" FontSize="16" FontWeight="Bold" Margin="0,0,0,15"/>
+                                
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="30"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="1" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="Connect the iPhone to your PC using a USB cable." TextWrapping="Wrap"/>
+                                </Grid>
+                                
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="30"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="2" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="Open iTunes or the Apple Devices app. Click your device icon." TextWrapping="Wrap"/>
+                                </Grid>
+                                
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="30"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="3" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="Select 'This Computer'. Click 'Back Up Now' and wait for the backup to complete." TextWrapping="Wrap"/>
+                                </Grid>
+                                
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="30"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="4" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="Click 'Select Backup Folder' and navigate to Apple/MobileSync/Backup. Select the folder with the long random name (e.g. 00008101-000...)." TextWrapping="Wrap"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="30"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="!" FontWeight="Bold" Foreground="{StaticResource SecondaryText}"/>
+                                    <TextBlock Grid.Column="1" Text="Important: Ensure 'Encrypt local backup' is NOT checked in iTunes/Apple Devices." 
+                                               FontStyle="Italic" Foreground="{StaticResource SecondaryText}" TextWrapping="Wrap"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,20">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="30"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="?" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="Note: Message Archive focuses on text messages, links, and analytics. Photos, videos, and other media attachments are not currently supported." 
+                                               FontStyle="Italic" Foreground="{StaticResource SecondaryText}" TextWrapping="Wrap"/>
+                                </Grid>
+
+                                <Button Content="Select Backup Folder" 
+                                        Command="{Binding SelectBackupFolderCommand}"
+                                        Padding="40,15" 
+                                        Background="{StaticResource AccentBrush}" 
+                                        Foreground="White" 
+                                        FontWeight="Bold"
+                                        BorderThickness="0"
+                                        Cursor="Hand"
+                                        HorizontalAlignment="Center">
+                                    <Button.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="6"/>
+                                        </Style>
+                                    </Button.Resources>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                        
+                        <StackPanel Margin="0,20,0,0" HorizontalAlignment="Center">
+                            <TextBlock Text="{Binding StatusMessage}" Foreground="#D13438" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap"/>
+                            <Button Content="Copy Tech Details" 
+                                    Command="{Binding CopyErrorDetailsCommand}" 
+                                    Visibility="{Binding LastExceptionDetails, Converter={StaticResource StringToVis}}"
+                                    Style="{StaticResource TextButtonStyle}"
+                                    Margin="0,5"/>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- Main Workspace (Chat) -->
+            <Grid Visibility="{Binding IsGalleryVisible, Converter={StaticResource BoolToVis}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="300"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Sidebar -->
+                <Grid Grid.Column="0" Background="{StaticResource SidebarBackground}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Messages" FontSize="20" FontWeight="Bold" Margin="20,24,20,12" Foreground="#1A1A1A"/>
+                    
+                    <Border Grid.Row="1" Margin="16,0,16,16" Background="White" CornerRadius="8" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Search" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0" Opacity="0.5"/>
+                            <TextBox Grid.Column="1" 
+                                     Text="{Binding ContactSearchText, UpdateSourceTrigger=PropertyChanged}" 
+                                     BorderThickness="0" 
+                                     Padding="8,10" 
+                                     Background="Transparent"
+                                     Tag="Search contacts..."/>
+                        </Grid>
+                    </Border>
+                    
+                    <ListBox Grid.Row="2" 
+                             ItemsSource="{Binding Contacts}" 
+                             SelectedItem="{Binding SelectedContact}"
+                             ItemTemplate="{StaticResource ContactTemplate}"
+                             Style="{StaticResource MinimalListBoxStyle}"
+                             Padding="8,0"/>
+                </Grid>
+
+                <!-- Chat Content area -->
+                <Grid Grid.Column="1" Background="White">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Chat Header -->
+                    <Border Grid.Row="0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="20,16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto" MinWidth="300" MaxWidth="450"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- Contact Info with Strict Trimming -->
+                            <Grid Grid.Column="0" VerticalAlignment="Center">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding SelectedContact.Display}" 
+                                               FontSize="20" FontWeight="Bold" Foreground="#1A1A1A" 
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding SelectedContact.Handle}" 
+                                               FontSize="13" Foreground="{StaticResource SecondaryText}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Grid>
+                            
+                            <!-- Search Box for messages - Fixed Width / Alignment -->
+                            <Border Grid.Column="1" Background="#F3F3F3" CornerRadius="8" Padding="12,6" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBox Width="180" 
+                                             Text="{Binding MessageSearchText, UpdateSourceTrigger=PropertyChanged}" 
+                                             Background="Transparent" 
+                                             BorderThickness="0" 
+                                             Padding="4"
+                                             VerticalAlignment="Center">
+                                        <TextBox.InputBindings>
+                                            <KeyBinding Key="Enter" Command="{Binding SearchMessagesCommand}"/>
+                                        </TextBox.InputBindings>
+                                    </TextBox>
+                                    
+                                    <Button Content="Prev" Command="{Binding FindPreviousCommand}" Margin="8,0,2,0" Background="Transparent" BorderThickness="0" FontWeight="Bold" FontSize="11"/>
+                                    <Button Content="Next" Command="{Binding FindNextCommand}" Margin="2,0,0,0" Background="Transparent" BorderThickness="0" FontWeight="Bold" FontSize="11"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Border>
+                    
+                    <!-- Conversations Thread -->
+                    <ListBox x:Name="MessageList"
+                             Grid.Row="1" 
+                             ItemsSource="{Binding CurrentMessages}"
+                             ItemTemplate="{StaticResource MessageTemplate}"
+                             Style="{StaticResource MinimalListBoxStyle}"
+                             Padding="0,20"
+                             VirtualizingStackPanel.IsVirtualizing="True"
+                             VirtualizingStackPanel.VirtualizationMode="Recycling">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Focusable" Value="False"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="HighlightBorder" Background="Transparent">
+                                                <ContentPresenter />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <DataTrigger Value="True">
+                                                    <DataTrigger.Binding>
+                                                        <MultiBinding Converter="{StaticResource EqualsConverter}">
+                                                            <Binding Path="." />
+                                                            <Binding Path="DataContext.HighlightedMessage" RelativeSource="{RelativeSource AncestorType=ListBox}" />
+                                                        </MultiBinding>
+                                                    </DataTrigger.Binding>
+                                                    <Setter TargetName="HighlightBorder" Property="Background" Value="#FFFACD"/>
+                                                </DataTrigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                    </ListBox>
+                    
+                    <!-- Footer Bar -->
+                    <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="16,8" Background="White">
+                        <Grid>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <CheckBox Content="Include Sent Items" IsChecked="{Binding IncludeSentItems}" VerticalAlignment="Center" FontSize="12"/>
+                            </StackPanel>
+                            
+                            <!-- Export Button in Footer -->
+                            <Button x:Name="ExportButton" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Padding="15,6"
+                                    Background="{StaticResource AccentBrush}" Foreground="White"
+                                    FontWeight="Bold" BorderThickness="0"
+                                    Content="Export Chat"
+                                    Cursor="Hand"
+                                    Click="ExportButton_Click">
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="4"/>
+                                    </Style>
+                                </Button.Resources>
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Export as PDF (.pdf)" Command="{Binding ExportChatCommand}" CommandParameter="pdf"/>
+                                        <MenuItem Header="Export as JSON (.json)" Command="{Binding ExportChatCommand}" CommandParameter="json"/>
+                                        <MenuItem Header="Export as Markdown (.md)" Command="{Binding ExportChatCommand}" CommandParameter="md"/>
+                                        <MenuItem Header="Export as Plain Text (.txt)" Command="{Binding ExportChatCommand}" CommandParameter="txt"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+
+            <!-- Analytics Dashboard -->
+            <Grid Visibility="{Binding IsAnalyticsVisible, Converter={StaticResource BoolToVis}}" Background="#F9F9F9">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="30" MaxWidth="1000">
+                        <Grid Margin="0,0,0,20">
+                            <TextBlock Text="{Binding CurrentAnalytics.ContactName, StringFormat='Analytics: {0}'}" FontSize="28" FontWeight="Bold"/>
+                            <Button HorizontalAlignment="Right" VerticalAlignment="Center" 
+                                    Content="Export as PDF" 
+                                    Command="{Binding ExportAnalyticsCommand}"
+                                    Padding="15,6" Background="{StaticResource AccentBrush}" Foreground="White" FontWeight="Bold" BorderThickness="0">
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="4"/>
+                                    </Style>
+                                </Button.Resources>
+                            </Button>
+                        </Grid>
+                        
+                        <UniformGrid Columns="2">
+                            <!-- Messages Sent -->
+                            <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Margin="0,0,10,10" Padding="20">
+                                <StackPanel>
+                                    <TextBlock Text="MESSAGES SENT" FontSize="11" FontWeight="Bold" Foreground="{StaticResource SecondaryText}" Margin="0,0,0,15"/>
+                                    <Grid>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding CurrentAnalytics.SentByMe, StringFormat='You: {0:N0}'}" FontSize="16" Margin="0,0,0,5"/>
+                                            <TextBlock FontSize="16" Margin="0,0,0,5">
+                                                <TextBlock.Text>
+                                                    <MultiBinding StringFormat="{}{0}: {1:N0}">
+                                                        <Binding Path="CurrentAnalytics.ContactName" />
+                                                        <Binding Path="CurrentAnalytics.SentByThem" />
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                            <Separator Margin="0,10"/>
+                                            <TextBlock Text="{Binding CurrentAnalytics.TotalMessages, StringFormat='Total: {0:N0}'}" FontSize="18" FontWeight="Bold"/>
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding CurrentAnalytics.SentByMePercent, StringFormat='({0:P0})'}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,0,0" Foreground="{StaticResource SecondaryText}"/>
+                                        <TextBlock Text="{Binding CurrentAnalytics.SentByThemPercent, StringFormat='({0:P0})'}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,30,0,0" Foreground="{StaticResource SecondaryText}"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Most Active Day -->
+                            <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Margin="10,0,0,10" Padding="20">
+                                <StackPanel>
+                                    <TextBlock Text="MOST ACTIVE DAY" FontSize="11" FontWeight="Bold" Foreground="{StaticResource SecondaryText}" Margin="0,0,0,15"/>
+                                    <TextBlock Text="{Binding CurrentAnalytics.MostActiveDay, StringFormat='{}{0:D}'}" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                    <TextBlock Text="{Binding CurrentAnalytics.MostActiveDayCount, StringFormat='{}{0} messages exchanged'}" FontSize="14" Foreground="{StaticResource SecondaryText}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Longest Streak -->
+                            <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Margin="0,10,10,0" Padding="20">
+                                <StackPanel>
+                                    <TextBlock Text="LONGEST STREAK" FontSize="11" FontWeight="Bold" Foreground="{StaticResource SecondaryText}" Margin="0,0,0,15"/>
+                                    <TextBlock Text="{Binding CurrentAnalytics.LongestStreakDays, StringFormat='{}{0} days'}" FontSize="24" FontWeight="Bold" Margin="0,0,0,5"/>
+                                    <TextBlock FontSize="13" Foreground="{StaticResource SecondaryText}">
+                                        <Run Text="{Binding CurrentAnalytics.StreakStart, StringFormat='{}{0:MMM d}'}"/>
+                                        <Run Text=" - "/>
+                                        <Run Text="{Binding CurrentAnalytics.StreakEnd, StringFormat='{}{0:MMM d, yyyy}'}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Longest Message -->
+                            <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Margin="10,10,0,0" Padding="20">
+                                <StackPanel>
+                                    <TextBlock Text="LONGEST MESSAGE" FontSize="11" FontWeight="Bold" Foreground="{StaticResource SecondaryText}" Margin="0,0,0,15"/>
+                                    <TextBlock Text="You" FontSize="11" FontWeight="Bold" Margin="0,0,0,5"/>
+                                    <Border Background="#F9F9F9" CornerRadius="4" Padding="8" Margin="0,0,0,12">
+                                        <TextBox Text="{Binding CurrentAnalytics.LongestMessageMe.Text}" 
+                                                 IsReadOnly="True" BorderThickness="0" Background="Transparent" 
+                                                 TextWrapping="Wrap" MaxHeight="100" VerticalScrollBarVisibility="Auto" FontSize="12"/>
+                                    </Border>
+
+                                    <TextBlock Text="{Binding CurrentAnalytics.ContactName}" FontSize="11" FontWeight="Bold" Margin="0,0,0,5"/>
+                                    <Border Background="#F9F9F9" CornerRadius="4" Padding="8">
+                                        <TextBox Text="{Binding CurrentAnalytics.LongestMessageThem.Text}" 
+                                                 IsReadOnly="True" BorderThickness="0" Background="Transparent" 
+                                                 TextWrapping="Wrap" MaxHeight="100" VerticalScrollBarVisibility="Auto" FontSize="12"/>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+
+                        <!-- Short Words (< 5 chars) -->
+                        <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Margin="0,20,0,0" Padding="20">
+                            <StackPanel>
+                                <TextBlock Text="TOP 5 SHORT WORDS (3-4 CHARS)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource SecondaryText}" Margin="0,0,0,15"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="You" FontWeight="Bold" Margin="0,0,0,10"/>
+                                        <ItemsControl ItemsSource="{Binding CurrentAnalytics.ShortWordsMe}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Margin="0,2">
+                                                        <Run Text="{Binding Word}" FontWeight="SemiBold"/>
+                                                        <Run Text="{Binding Count, StringFormat=' ({0})'}" Foreground="{StaticResource SecondaryText}"/>
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="{Binding CurrentAnalytics.ContactName}" FontWeight="Bold" Margin="0,0,0,10"/>
+                                        <ItemsControl ItemsSource="{Binding CurrentAnalytics.ShortWordsThem}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Margin="0,2">
+                                                        <Run Text="{Binding Word}" FontWeight="SemiBold"/>
+                                                        <Run Text="{Binding Count, StringFormat=' ({0})'}" Foreground="{StaticResource SecondaryText}"/>
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Long Words (5+ chars) -->
+                        <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Margin="0,20,0,0" Padding="20">
+                            <StackPanel>
+                                <TextBlock Text="TOP 5 LONG WORDS (5+ CHARS)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource SecondaryText}" Margin="0,0,0,15"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="You" FontWeight="Bold" Margin="0,0,0,10"/>
+                                        <ItemsControl ItemsSource="{Binding CurrentAnalytics.LongWordsMe}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Margin="0,2">
+                                                        <Run Text="{Binding Word}" FontWeight="SemiBold"/>
+                                                        <Run Text="{Binding Count, StringFormat=' ({0})'}" Foreground="{StaticResource SecondaryText}"/>
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="{Binding CurrentAnalytics.ContactName}" FontWeight="Bold" Margin="0,0,0,10"/>
+                                        <ItemsControl ItemsSource="{Binding CurrentAnalytics.LongWordsThem}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Margin="0,2">
+                                                        <Run Text="{Binding Word}" FontWeight="SemiBold"/>
+                                                        <Run Text="{Binding Count, StringFormat=' ({0})'}" Foreground="{StaticResource SecondaryText}"/>
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Top Emojis -->
+                        <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Margin="0,20,0,20" Padding="20">
+                            <StackPanel>
+                                <TextBlock Text="TOP 5 EMOJIS" FontSize="11" FontWeight="Bold" Foreground="{StaticResource SecondaryText}" Margin="0,0,0,15"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="You" FontWeight="Bold" Margin="0,0,0,10"/>
+                                        <ItemsControl ItemsSource="{Binding CurrentAnalytics.TopEmojisMe}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock FontSize="18" FontFamily="Segoe UI Emoji" Margin="0,2">
+                                                        <Run Text="{Binding Word}"/>
+                                                        <Run Text="{Binding Count, StringFormat=' ({0})'}" FontSize="12" FontFamily="Segoe UI" Foreground="{StaticResource SecondaryText}"/>
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="{Binding CurrentAnalytics.ContactName}" FontWeight="Bold" Margin="0,0,0,10"/>
+                                        <ItemsControl ItemsSource="{Binding CurrentAnalytics.TopEmojisThem}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock FontSize="18" FontFamily="Segoe UI Emoji" Margin="0,2">
+                                                        <Run Text="{Binding Word}"/>
+                                                        <Run Text="{Binding Count, StringFormat=' ({0})'}" FontSize="12" FontFamily="Segoe UI" Foreground="{StaticResource SecondaryText}"/>
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- Links Dashboard -->
+            <Grid Visibility="{Binding IsLinksVisible, Converter={StaticResource BoolToVis}}" Background="White">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="220"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Categories Sidebar -->
+                <Border Grid.Column="0" Background="{StaticResource SidebarBackground}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0" Padding="15">
+                    <StackPanel>
+                        <TextBlock Text="CATEGORIES" FontSize="11" FontWeight="Bold" Foreground="{StaticResource SecondaryText}" Margin="0,0,0,15"/>
+                        <ListBox SelectedValue="{Binding CurrentLinksCategory}" SelectedValuePath="Content" Style="{StaticResource MinimalListBoxStyle}">
+                            <ListBoxItem Content="All" IsSelected="True"/>
+                            <ListBoxItem Content="YouTube"/>
+                            <ListBoxItem Content="Spotify"/>
+                            <ListBoxItem Content="Instagram"/>
+                            <ListBoxItem Content="Twitter"/>
+                            <ListBoxItem Content="Other"/>
+                        </ListBox>
+                    </StackPanel>
+                </Border>
+
+                <!-- Links List -->
+                <Grid Grid.Column="1" Margin="20">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="{Binding CurrentLinksCategory, StringFormat='{}{0} LINKS'}" FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
+
+                    <ListBox Grid.Row="1" ItemsSource="{Binding CurrentLinks}" Style="{StaticResource MinimalListBoxStyle}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Margin="0,0,0,20" />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#FDFFDF" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="15" Margin="0,0,15,15" Width="280">
+                                    <Grid>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Domain}" FontSize="15" FontWeight="Bold" Margin="0,0,0,4"/>
+                                            <TextBlock Text="{Binding Url}" FontSize="12" Foreground="{StaticResource AccentBrush}" TextTrimming="CharacterEllipsis" MaxHeight="32"/>
+                                            <TextBlock Text="{Binding Date, StringFormat='{}{0:MMM d, yyyy}'}" FontSize="11" Foreground="{StaticResource SecondaryText}" Margin="0,15,0,0"/>
+                                        </StackPanel>
+                                        <Button Command="{Binding DataContext.OpenLinkCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"
+                                                HorizontalAlignment="Right" VerticalAlignment="Top" Content="Go" Padding="8,4" Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Cursor="Hand">
+                                            <Button.Resources>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="CornerRadius" Value="4"/>
+                                                </Style>
+                                            </Button.Resources>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- Loading Overlay -->
+        <Border Grid.Row="1" Background="#44000000" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
+            <Border Background="White" CornerRadius="12" Padding="30" VerticalAlignment="Center" HorizontalAlignment="Center" Width="350">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="20" ShadowDepth="0" Opacity="0.2"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock Text="Processing Backup" FontWeight="Bold" FontSize="16" Margin="0,0,0,10" HorizontalAlignment="Center"/>
+                    <ProgressBar IsIndeterminate="True" Width="250" Height="6" BorderThickness="0" Background="#F0F0F0" Foreground="{StaticResource AccentBrush}"/>
+                    <TextBlock Text="{Binding LoadingMessage}" Margin="0,15,0,0" HorizontalAlignment="Center" FontSize="12" Foreground="{StaticResource SecondaryText}" TextWrapping="Wrap" TextAlignment="Center"/>
+                    <TextBlock Text="Note: This is all local. No data leaves your PC." FontSize="10" Foreground="#AAAAAA" Margin="0,20,0,0" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </Border>
+    </Grid>
+</Window>
