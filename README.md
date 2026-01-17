@@ -2,6 +2,15 @@
 
 Message Archive is a Windows desktop application for viewing and exploring iMessage conversations from local iPhone backups. It allows you to read iMessage message history on a PC, search conversations, and export message data without uploading anything to the cloud.
 
+## Privacy & Data Cleanup
+
+For maximum speed, Message Archive creates a local index database named `vault.db`. This file remains on your computer after you close the application so that your conversations load instantly the next time you use it.
+
+**If you wish to remove all indexed data from your computer, simply delete this folder after use:**  
+`%LOCALAPPDATA%\MessageArchive`
+
+To do this, press `Win + R`, paste the path above, and delete the folder.
+
 ![Message Archive App Screenshot](src/MessageArchive/Assets/screenshot.png)
 ## Download
 
