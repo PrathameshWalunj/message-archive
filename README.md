@@ -15,6 +15,7 @@ To do this, press `Win + R`, paste the path above, and delete the folder.
 ## Download
 
 **[Download the latest Windows installer](../../releases/latest/download/MessageArchive-Setup.exe)**
+or **Download from the Microsoft Store (https://apps.microsoft.com/detail/9ppcz3wmxvdn?hl=en-US&gl=US)**
 
 ## Features
 
